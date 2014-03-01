@@ -24,7 +24,7 @@ Installing
 ----------
 Install with pip:
 
-    $ pip install https://github.com/myevan/pypm.git
+    $ pip install git+https://github.com/myevan/pypm.git
 
 or download the lastest version from version control
 
