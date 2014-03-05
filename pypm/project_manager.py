@@ -124,7 +124,7 @@ class ProjectManager(object):
         return DirectoryContext(os.path.realpath(dir_path))
 
     @staticmethod
-    def is_valid_directory(dir_path):
+    def access_directory(dir_path):
         return os.access(dir_path, os.R_OK)
 
     @staticmethod
