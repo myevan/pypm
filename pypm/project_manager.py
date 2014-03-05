@@ -235,7 +235,7 @@ class ProjectManager(object):
             shutil.rmtree(real_dir_path)
 
     @classmethod
-    def remove_trees_by_patterns(cls, path_patterns, base_dir_path='.', is_testing=True):
+    def remove_trees_by_patterns(cls, path_patterns, base_dir_path='.', is_testing=True, is_verbose=True):
         real_dir_paths = [os.path.realpath(dir_path)
                 for dir_path in cls.find_dir_path_iter(
                     base_dir_path, path_patterns, is_all_dirs=True)]
@@ -244,11 +244,12 @@ class ProjectManager(object):
             if is_testing:
                 print 'test_remove_tree:', real_dir_path, 'path_patterns:', path_patterns
             else:
-                print 'remove_tree:', real_dir_path, 'path_patterns:', path_patterns
+                if is_verbose:
+                    print 'remove_tree:', real_dir_path, 'path_patterns:', path_patterns
                 shutil.rmtree(real_dir_path)
 
     @classmethod
-    def remove_files_by_patterns(cls, path_patterns, base_dir_path='.', is_testing=True):
+    def remove_files_by_patterns(cls, path_patterns, base_dir_path='.', is_testing=True, is_verbose=True):
         real_file_paths = [os.path.realpath(file_path)
                 for file_path in cls.find_file_path_iter(
                     base_dir_path, path_patterns, is_all_files=True)]
@@ -257,7 +258,8 @@ class ProjectManager(object):
             if is_testing:
                 print 'test_remove_file:', real_file_path, 'path_patterns:', path_patterns
             else:
-                print 'remove_file:', real_file_path, 'path_patterns:', path_patterns
+                if is_verbose:
+                    print 'remove_file:', real_file_path, 'path_patterns:', path_patterns
                 os.remove(real_file_path)
 
     @classmethod
