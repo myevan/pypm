@@ -128,6 +128,10 @@ class ProjectManager(object):
         return os.access(dir_path, os.R_OK)
 
     @staticmethod
+    def access_file(file_path):
+        return os.access(file_path, os.R_OK)
+
+    @staticmethod
     def find_dir_path_iter(
             base_dir_path='.',
             path_patterns=None,
@@ -201,6 +205,15 @@ class ProjectManager(object):
         if file_bom == BOM_UTF8:
             file_data = open(file_path, 'rb').read()
             open(file_path, 'wb').write(file_data[len(BOM_UTF8):])
+
+    @staticmethod
+    def remove_file(file_path, is_testing=True):
+        real_file_path = os.path.realpath(file_path)
+        if is_testing:
+            print 'test_remove_file:', real_file_path
+        else:
+            print 'remove_file:', real_file_path
+            os.remove(real_file_path)
 
     @staticmethod
     def remove_tree(dir_path, is_testing=True):
@@ -291,9 +304,11 @@ if __name__ == '__main__':
             pm.touch_file('temp/t1/f1')
             pm.touch_file('temp/t2/f2')
             pm.touch_file('temp/t3/f3')
+            pm.touch_file('temp/t3/f3-2')
             pm.remove_tree('temp/t1', is_testing=False)
             pm.remove_trees_by_patterns(['temp/*2'], is_testing=False)
             pm.remove_files_by_patterns(['temp/*/*3'], is_testing=False)
+            pm.remove_file('temp/t3/f3-2', is_testing=False)
             pm.remove_tree('temp', is_testing=False)
 
     pm.run_command(['test', 'haha'])
