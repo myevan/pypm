@@ -194,6 +194,10 @@ class ProjectManager(object):
             file_data = open(file_path, 'rb').read()
             open(file_path, 'wb').write(file_data[len(BOM_UTF8):])
 
+    @staticmethod
+    def remove_tree(tree_path):
+        shutil.rmtree(dir_path)
+
     @classmethod
     def remove_trees_by_patterns(cls, base_dir_path, path_patterns):
         dir_paths = [dir_path 
