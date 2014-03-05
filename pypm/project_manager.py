@@ -110,10 +110,10 @@ class ProjectManager(object):
             return self.ExitCode.WRONG_PROCESS
 
     @staticmethod
-    def run_program(exec_path, exec_args, is_verbose=True):
+    def run_command_line(exec_path, exec_args, is_verbose=True):
         cmd_line = '%s %s' % (exec_path, ' '.join(exec_args))
         if is_verbose:
-            print cmd_line
+            print '$ %s' % cmd_line
         return os.system(cmd_line)
 
     @staticmethod
@@ -263,7 +263,7 @@ class ProjectManager(object):
     @classmethod
     def make_symbolic_link(cls, source_path, target_path):
         print 'make_symbolic_link_source:', source_path, 'target:', target_path
-        cls.run_program('ln', ['-s', source_path, target_path], is_verbose=False)
+        cls.run_command_line('ln', ['-s', source_path, target_path], is_verbose=False)
 
     @staticmethod
     def make_directory(dir_path):
