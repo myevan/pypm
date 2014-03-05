@@ -2,6 +2,7 @@
 import os
 import re
 import code
+import shutil
 import argparse
 import functools
 
@@ -33,7 +34,7 @@ class FilterPathPattern(object):
 
     def __call__(self, path):
         for pattern in self.patterns:
-            if pattern is str:
+            if isinstance(pattern, str):
                 return fnmatch(path, pattern)
             else:
                 return pattern.match(path)
@@ -116,22 +117,46 @@ class ProjectManager(object):
     def run_python_shell(title, local_dict):
         code.interact(title, local=local_dict)
 
-    def push_directory(self, dir_name):
+    @staticmethod
+    def push_directory(dir_name):
         return PushDirectoryContext(dir_name)
 
+    @staticmethod
+    def find_dir_path_iter(
+            base_dir_path,
+            path_patterns=None,
+            filter_dir_name=None,
+            is_all_dirs=False):
+
+        filter_path_pattern = FilterPathPattern(path_patterns) if path_patterns else None
+
+        for parent_dir_path, dir_names, file_names in os.walk(base_dir_path):
+            if filter_path_pattern is None or filter_path_pattern(parent_dir_path[len(base_dir_path) + 1:]):
+                yield parent_dir_path
+
+            if not is_all_dirs:
+                for dir_name in list(dir_names):
+                    if dir_name[0] == '.':
+                        dir_names.remove(dir_name)
+
+            if filter_dir_name:
+                for dir_name in list(dir_names):
+                    if not filter_dir_name(dir_name):
+                        dir_names.remove(dir_name)
+
+    @staticmethod
     def find_file_path_iter(
-            self,
-            root_dir_path,
-            is_all_files=False,
+            base_dir_path,
             path_patterns=None,
             filter_dir_name=None,
             filter_file_name=None,
             filter_file_ext=None,
-            filter_file_path=None):
+            filter_file_path=None,
+            is_all_files=False):
 
         filter_path_pattern = FilterPathPattern(path_patterns) if path_patterns else None
 
-        for parent_dir_path, dir_names, file_names in os.walk(root_dir_path):
+        for parent_dir_path, dir_names, file_names in os.walk(base_dir_path):
             if not is_all_files:
                 for dir_name in list(dir_names):
                     if dir_name[0] == '.':
@@ -152,7 +177,7 @@ class ProjectManager(object):
                     if filter_file_ext is None or filter_file_ext(file_ext):
                         file_path = os.path.join(parent_dir_path, file_name)
                         if filter_file_path is None or filter_file_path(file_path):
-                            if filter_path_pattern is None or filter_path_pattern(file_path):
+                            if filter_path_pattern is None or filter_path_pattern(file_path[len(base_dir_path) + 1:]):
                                 yield file_path
 
     @staticmethod
@@ -169,6 +194,15 @@ class ProjectManager(object):
             file_data = open(file_path, 'rb').read()
             open(file_path, 'wb').write(file_data[len(BOM_UTF8):])
 
+    @classmethod
+    def remove_directories_by_patterns(cls, base_dir_path, path_patterns):
+        dir_paths = [dir_path 
+                for dir_path in cls.find_dir_path_iter(
+                    base_dir_path, path_patterns, is_all_dirs=True)]
+        
+        for dir_path in reversed(dir_paths):
+            shutil.rmtree(dir_path)
+
 if __name__ == '__main__':
     pm = ProjectManager()
 
@@ -177,7 +211,9 @@ if __name__ == '__main__':
         print os.getcwd()
         with pm.push_directory('..'):
             print os.getcwd()
-            for file_path in pm.find_file_path_iter('.', path_patterns=['./pypm/....py']):
+            for file_path in pm.find_file_path_iter('.', path_patterns=['pypm/....py']):
                 print file_path
+
+        pm.remove_directories_by_patterns('..', ['temp*'])
 
     pm.run_command(['test', 'haha'])
