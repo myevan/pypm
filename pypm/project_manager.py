@@ -263,7 +263,7 @@ class ProjectManager(object):
     @classmethod
     def make_symbolic_link(cls, source_path, target_path):
         print 'make_symbolic_link_source:', source_path, 'target:', target_path
-        cls.run_command_line('ln', ['-s', source_path, target_path], is_verbose=False)
+        os.symlink(source_path, target_path)
 
     @staticmethod
     def make_directory(dir_path):
@@ -316,9 +316,11 @@ if __name__ == '__main__':
             pm.touch_file('temp/t2/f2')
             pm.touch_file('temp/t3/f3')
             pm.touch_file('temp/t3/f3-2')
+            pm.make_symbolic_link('temp/t3/f3-2', 'temp/t3/f3-2s')
             pm.remove_tree('temp/t1', is_testing=False)
             pm.remove_trees_by_patterns(['temp/*2'], is_testing=False)
             pm.remove_files_by_patterns(['temp/*/*3'], is_testing=False)
+            pm.remove_symbolic_link('temp/t3/f3-2s', is_testing=False)
             pm.remove_file('temp/t3/f3-2', is_testing=False)
             pm.remove_tree('temp', is_testing=False)
 
