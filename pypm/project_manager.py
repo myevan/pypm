@@ -1,9 +1,42 @@
 # -*- coding:utf8 -*-
 import os
+import re
 import code
 import argparse
 import functools
 
+from fnmatch import fnmatch
+
+from codecs import BOM_UTF8
+
+class PushDirectoryContext(object):
+    def __init__(self, dir_name):
+        self.target_dir_path = os.path.realpath(dir_name)
+        self.prev_dir_path = None
+ 
+    def __enter__(self):
+        self.prev_dir_path = os.getcwd()
+        os.chdir(self.target_dir_path)
+        return self
+ 
+    def __exit__(self, type, value, tb):
+        os.chdir(self.prev_dir_path)
+
+class FilterPathPattern(object):
+    RECURSIVE_DIR_PATTERN = '...'
+
+    def __init__(self, patterns):
+        self.patterns = [
+                re.compile(pattern.replace('...', '[\w\/]+')) 
+                if '...' in pattern else pattern 
+                for pattern in patterns]
+
+    def __call__(self, path):
+        for pattern in self.patterns:
+            if pattern is str:
+                return fnmatch(path, pattern)
+            else:
+                return pattern.match(path)
 
 class ProjectManager(object):
     class ExitCode(object):
@@ -83,11 +116,68 @@ class ProjectManager(object):
     def run_python_shell(title, local_dict):
         code.interact(title, local=local_dict)
 
+    def push_directory(self, dir_name):
+        return PushDirectoryContext(dir_name)
+
+    def find_file_path_iter(
+            self,
+            root_dir_path,
+            is_all_files=False,
+            path_patterns=None,
+            filter_dir_name=None,
+            filter_file_name=None,
+            filter_file_ext=None,
+            filter_file_path=None):
+
+        filter_path_pattern = FilterPathPattern(path_patterns) if path_patterns else None
+
+        for parent_dir_path, dir_names, file_names in os.walk(root_dir_path):
+            if not is_all_files:
+                for dir_name in list(dir_names):
+                    if dir_name[0] == '.':
+                        dir_names.remove(dir_name)
+
+            if filter_dir_name:
+                for dir_name in list(dir_names):
+                    if not filter_dir_name(dir_name):
+                        dir_names.remove(dir_name)
+            
+            for file_name in file_names:
+                if not is_all_files:
+                    if file_name[0] == '.':
+                        continue
+
+                if filter_file_name is None or filter_file_name(file_name):
+                    file_ext = os.path.splitext(file_name)[1].lower()
+                    if filter_file_ext is None or filter_file_ext(file_ext):
+                        file_path = os.path.join(parent_dir_path, file_name)
+                        if filter_file_path is None or filter_file_path(file_path):
+                            if filter_path_pattern is None or filter_path_pattern(file_path):
+                                yield file_path
+
+    @staticmethod
+    def add_utf8_bom(file_path):
+        file_bom = open(file_path, 'rb').read(len(BOM_UTF8))
+        if file_bom != BOM_UTF8:
+            file_data = open(file_path, 'rb').read()
+            open(file_path, 'wb').write(BOM_UTF8 + file_data)
+
+    @staticmethod
+    def remove_utf8_bom(file_path):
+        file_bom = open(file_path, 'rb').read(len(BOM_UTF8))
+        if file_bom == BOM_UTF8:
+            file_data = open(file_path, 'rb').read()
+            open(file_path, 'wb').write(file_data[len(BOM_UTF8):])
+
 if __name__ == '__main__':
     pm = ProjectManager()
 
     @pm.command(msg=dict(type=str, nargs='+'))
     def test(msg):
-        print msg
+        print os.getcwd()
+        with pm.push_directory('..'):
+            print os.getcwd()
+            for file_path in pm.find_file_path_iter('.', path_patterns=['./pypm/....py']):
+                print file_path
 
     pm.run_command(['test', 'haha'])
