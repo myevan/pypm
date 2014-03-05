@@ -195,7 +195,7 @@ class ProjectManager(object):
             open(file_path, 'wb').write(file_data[len(BOM_UTF8):])
 
     @classmethod
-    def remove_directories_by_patterns(cls, base_dir_path, path_patterns):
+    def remove_trees_by_patterns(cls, base_dir_path, path_patterns):
         dir_paths = [dir_path 
                 for dir_path in cls.find_dir_path_iter(
                     base_dir_path, path_patterns, is_all_dirs=True)]
@@ -213,7 +213,5 @@ if __name__ == '__main__':
             print os.getcwd()
             for file_path in pm.find_file_path_iter('.', path_patterns=['pypm/....py']):
                 print file_path
-
-        pm.remove_directories_by_patterns('..', ['temp*'])
 
     pm.run_command(['test', 'haha'])
