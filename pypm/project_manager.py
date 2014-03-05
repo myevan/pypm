@@ -10,17 +10,19 @@ from fnmatch import fnmatch
 
 from codecs import BOM_UTF8
 
-class PushDirectoryContext(object):
-    def __init__(self, dir_name):
-        self.target_dir_path = os.path.realpath(dir_name)
+class DirectoryContext(object):
+    def __init__(self, dir_path):
+        self.target_dir_path = dir_path
         self.prev_dir_path = None
  
     def __enter__(self):
+        print 'push_directory:', self.target_dir_path
         self.prev_dir_path = os.getcwd()
         os.chdir(self.target_dir_path)
         return self
  
     def __exit__(self, type, value, tb):
+        print 'pop_directory:', self.prev_dir_path
         os.chdir(self.prev_dir_path)
 
 class FilterPathPattern(object):
@@ -118,21 +120,26 @@ class ProjectManager(object):
         code.interact(title, local=local_dict)
 
     @staticmethod
-    def push_directory(dir_name):
-        return PushDirectoryContext(dir_name)
+    def push_directory(dir_path):
+        return DirectoryContext(os.path.realpath(dir_path))
+
+    @staticmethod
+    def is_valid_directory(dir_path):
+        return os.access(dir_path, os.R_OK)
 
     @staticmethod
     def find_dir_path_iter(
-            base_dir_path,
+            base_dir_path='.',
             path_patterns=None,
             filter_dir_name=None,
-            is_all_dirs=False):
+            is_all_dirs=False,
+            is_real_path=True):
 
         filter_path_pattern = FilterPathPattern(path_patterns) if path_patterns else None
 
         for parent_dir_path, dir_names, file_names in os.walk(base_dir_path):
             if filter_path_pattern is None or filter_path_pattern(parent_dir_path[len(base_dir_path) + 1:]):
-                yield parent_dir_path
+                yield os.path.realpath(parent_dir_path) if is_real_path else parent_dir_path
 
             if not is_all_dirs:
                 for dir_name in list(dir_names):
@@ -146,13 +153,14 @@ class ProjectManager(object):
 
     @staticmethod
     def find_file_path_iter(
-            base_dir_path,
+            base_dir_path='.',
             path_patterns=None,
             filter_dir_name=None,
             filter_file_name=None,
             filter_file_ext=None,
             filter_file_path=None,
-            is_all_files=False):
+            is_all_files=False,
+            is_real_path=True):
 
         filter_path_pattern = FilterPathPattern(path_patterns) if path_patterns else None
 
@@ -178,7 +186,7 @@ class ProjectManager(object):
                         file_path = os.path.join(parent_dir_path, file_name)
                         if filter_file_path is None or filter_file_path(file_path):
                             if filter_path_pattern is None or filter_path_pattern(file_path[len(base_dir_path) + 1:]):
-                                yield file_path
+                                yield os.path.realpath(file_path) if is_real_path else file_path
 
     @staticmethod
     def add_utf8_bom(file_path):
@@ -195,27 +203,97 @@ class ProjectManager(object):
             open(file_path, 'wb').write(file_data[len(BOM_UTF8):])
 
     @staticmethod
-    def remove_tree(tree_path):
-        shutil.rmtree(dir_path)
+    def remove_tree(dir_path, is_testing=True):
+        real_dir_path = os.path.realpath(dir_path)
+        if is_testing:
+            print 'test_remove_tree:', real_dir_path
+        else:
+            print 'remove_tree:', real_dir_path
+            shutil.rmtree(real_dir_path)
 
     @classmethod
-    def remove_trees_by_patterns(cls, base_dir_path, path_patterns):
-        dir_paths = [dir_path 
+    def remove_trees_by_patterns(cls, path_patterns, base_dir_path='.', is_testing=True):
+        real_dir_paths = [os.path.realpath(dir_path)
                 for dir_path in cls.find_dir_path_iter(
                     base_dir_path, path_patterns, is_all_dirs=True)]
         
-        for dir_path in reversed(dir_paths):
-            shutil.rmtree(dir_path)
+        for real_dir_path in reversed(real_dir_paths):
+            if is_testing:
+                print 'test_remove_tree:', real_dir_path, 'path_patterns:', path_patterns
+            else:
+                print 'remove_tree:', real_dir_path, 'path_patterns:', path_patterns
+                shutil.rmtree(real_dir_path)
+
+    @classmethod
+    def remove_files_by_patterns(cls, path_patterns, base_dir_path='.', is_testing=True):
+        real_file_paths = [os.path.realpath(file_path)
+                for file_path in cls.find_file_path_iter(
+                    base_dir_path, path_patterns, is_all_files=True)]
+        
+        for real_file_path in real_file_paths:
+            if is_testing:
+                print 'test_remove_file:', real_file_path, 'path_patterns:', path_patterns
+            else:
+                print 'remove_file:', real_file_path, 'path_patterns:', path_patterns
+                os.remove(real_file_path)
+
+    @classmethod
+    def make_symbolic_link(cls, source_path, target_path):
+        cls.run_program('ln', ['-s', source_path, target_path])
+
+    @staticmethod
+    def make_directory(dir_path):
+        real_dir_path = os.path.realpath(dir_path)
+        if os.access(real_dir_path, os.R_OK):
+            print 'already_made_directory:', real_dir_path
+            return False
+
+        print 'make_directory:', real_dir_path
+        os.makedirs(real_dir_path)
+        return True
+
+    @staticmethod
+    def touch_file(file_path):
+        real_file_path = os.path.realpath(file_path)
+        if os.access(real_file_path, os.R_OK):
+            print 'touch_file:', real_file_path
+            file_data = open(file_path, "rb").read()
+        else:
+            print 'make_touch_file:', real_file_path
+            file_data = ""
+
+        open(real_file_path, "wb").write(file_data)
 
 if __name__ == '__main__':
+    FILE_PATH = os.path.realpath(__file__)
+    MODULE_PATH = os.path.dirname(FILE_PATH)
+    PROJECT_PATH = os.path.dirname(MODULE_PATH)
+
     pm = ProjectManager()
 
     @pm.command(msg=dict(type=str, nargs='+'))
     def test(msg):
-        print os.getcwd()
-        with pm.push_directory('..'):
-            print os.getcwd()
-            for file_path in pm.find_file_path_iter('.', path_patterns=['pypm/....py']):
+        with pm.push_directory(PROJECT_PATH) as parent_dir:
+            print "total directories"
+            for dir_path in pm.find_dir_path_iter(path_patterns=['*']):
+                print dir_path
+            print
+
+            print "found files"
+            for file_path in pm.find_file_path_iter(path_patterns=['pypm/....py']):
                 print file_path
+
+            pm.make_directory('temp')
+            pm.touch_file('temp/empty')
+            pm.make_directory('temp/t1')
+            pm.make_directory('temp/t2')
+            pm.make_directory('temp/t3')
+            pm.touch_file('temp/t1/f1')
+            pm.touch_file('temp/t2/f2')
+            pm.touch_file('temp/t3/f3')
+            pm.remove_tree('temp/t1', is_testing=False)
+            pm.remove_trees_by_patterns(['temp/*2'], is_testing=False)
+            pm.remove_files_by_patterns(['temp/*/*3'], is_testing=False)
+            pm.remove_tree('temp', is_testing=False)
 
     pm.run_command(['test', 'haha'])
