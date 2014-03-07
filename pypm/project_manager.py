@@ -110,7 +110,7 @@ class ProjectManager(object):
             return self.ExitCode.WRONG_PROCESS
 
     @staticmethod
-    def run_command_line(exec_path, exec_args, is_verbose=True):
+    def run_system_command(exec_path, exec_args, is_verbose=True):
         cmd_line = '%s %s' % (exec_path, ' '.join(exec_args))
         if is_verbose:
             print '$ %s' % cmd_line
