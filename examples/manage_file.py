@@ -3,12 +3,9 @@ from pypm import ProjectManager
 
 pm = ProjectManager()
 
-@pm.command(messages=dict(type=str, nargs='+', help='echo messages'))
-def echo(messages):
-    """
-    echo messages
-    """
-    print messages
+@pm.command(hint=dict(type=str, nargs=1, help='file path or name hint'))
+def find(hint):
+    print 'FOUND_FILE_PATH:', pm.smart_find_file_path(hint)
 
 if __name__ == '__main__':
     import sys
