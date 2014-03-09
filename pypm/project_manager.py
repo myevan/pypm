@@ -30,7 +30,7 @@ class FilterPattern(object):
 
     def __init__(self, patterns):
         self.patterns = [
-                re.compile(pattern.replace('...', '[\w\/]+')) 
+                re.compile(pattern.replace('...', '[\w\/]+') + '$') 
                 if '...' in pattern else pattern 
                 for pattern in patterns]
 
@@ -283,8 +283,10 @@ class ProjectManager(object):
 
     @classmethod
     def make_symbolic_link(cls, source_path, target_path):
-        print 'make_symbolic_link_source:', source_path, 'target:', target_path
-        os.symlink(source_path, target_path)
+        real_source_path = os.path.realpath(source_path)
+        real_target_path = os.path.realpath(target_path)
+        print 'make_symbolic_link_source:', real_source_path, 'target:', real_target_path
+        os.symlink(real_source_path, real_target_path)
 
     @staticmethod
     def make_directory(dir_path):
@@ -309,6 +311,7 @@ class ProjectManager(object):
 
         open(real_file_path, "wb").write(file_data)
 
+
 if __name__ == '__main__':
     FILE_PATH = os.path.realpath(__file__)
     MODULE_PATH = os.path.dirname(FILE_PATH)
@@ -316,33 +319,8 @@ if __name__ == '__main__':
 
     pm = ProjectManager()
 
-    @pm.command(msg=dict(type=str, nargs='+'))
-    def test(msg):
-        with pm.push_directory(PROJECT_PATH) as parent_dir:
-            print "total directories"
-            for dir_path in pm.find_dir_path_iter(path_patterns=['*']):
-                print dir_path
-            print
+    @pm.command(messages=dict(type=str, nargs='+'))
+    def echo(messages):
+        print messages
 
-            print "found files"
-            for file_path in pm.find_file_path_iter(path_patterns=['pypm/....py']):
-                print file_path
-
-            pm.make_directory('temp')
-            pm.touch_file('temp/empty')
-            pm.make_directory('temp/t1')
-            pm.make_directory('temp/t2')
-            pm.make_directory('temp/t3')
-            pm.touch_file('temp/t1/f1')
-            pm.touch_file('temp/t2/f2')
-            pm.touch_file('temp/t3/f3')
-            pm.touch_file('temp/t3/f3-2')
-            pm.make_symbolic_link('temp/t3/f3-2', 'temp/t3/f3-2s')
-            pm.remove_tree('temp/t1', is_testing=False)
-            pm.remove_trees_by_patterns(['temp/*2'], is_testing=False)
-            pm.remove_files_by_patterns(['temp/*/*3'], is_testing=False)
-            pm.remove_symbolic_link('temp/t3/f3-2s', is_testing=False)
-            pm.remove_file('temp/t3/f3-2', is_testing=False)
-            pm.remove_tree('temp', is_testing=False)
-
-    pm.run_command(['test', 'haha'])
+    pm.run_command(['echo', 'haha'])
