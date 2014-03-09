@@ -25,7 +25,7 @@ class DirectoryContext(object):
         print 'pop_directory:', self.prev_dir_path
         os.chdir(self.prev_dir_path)
 
-class FilterPathPattern(object):
+class FilterPattern(object):
     RECURSIVE_DIR_PATTERN = '...'
 
     def __init__(self, patterns):
@@ -34,12 +34,12 @@ class FilterPathPattern(object):
                 if '...' in pattern else pattern 
                 for pattern in patterns]
 
-    def __call__(self, path):
+    def __call__(self, text):
         for pattern in self.patterns:
             if isinstance(pattern, str):
-                return fnmatch(path, pattern)
+                return fnmatch(text, pattern)
             else:
-                return pattern.match(path)
+                return pattern.match(text)
 
 class ProjectManager(object):
     class ExitCode(object):
@@ -106,7 +106,9 @@ class ProjectManager(object):
         ns = self.main_parser.parse_args(cmd_args)
         try:
             return ns.func(ns)
-        except self.Error:
+        except self.Error as e:
+            print ''
+            print str(e)
             return self.ExitCode.WRONG_PROCESS
 
     @staticmethod
@@ -140,7 +142,7 @@ class ProjectManager(object):
             is_all_dirs=False,
             is_real_path=True):
 
-        filter_path_pattern = FilterPathPattern(path_patterns) if path_patterns else None
+        filter_path_pattern = FilterPattern(path_patterns) if path_patterns else None
 
         for parent_dir_path, dir_names, file_names in os.walk(base_dir_path):
             if filter_path_pattern is None or filter_path_pattern(parent_dir_path[len(base_dir_path) + 1:]):
@@ -156,6 +158,23 @@ class ProjectManager(object):
                     if not filter_dir_name(dir_name):
                         dir_names.remove(dir_name)
 
+    @classmethod
+    def smart_find_file_path_iter(cls, hint, base_dir_path='.'):
+        real_file_path = os.path.realpath(os.path.expandvars(hint))
+        if os.access(real_file_path, os.R_OK):
+            yield real_file_path
+
+        file_name_pattern = hint + '*'
+        for found_file_path in cls.find_file_path_iter(base_dir_path, filter_file_name=FilterPattern([file_name_pattern])):
+            yield found_file_path
+
+    @classmethod
+    def smart_find_file_path(cls, hint, base_dir_path='.'):
+        for found_file_path in cls.smart_find_file_path_iter(hint, base_dir_path):
+            return found_file_path
+        else:           
+            raise cls.Error('NOT_FOUND_FILE_IN_DIR_PATH:' + base_dir_path + ' HINT:' + hint)
+
     @staticmethod
     def find_file_path_iter(
             base_dir_path='.',
@@ -167,7 +186,7 @@ class ProjectManager(object):
             is_all_files=False,
             is_real_path=True):
 
-        filter_path_pattern = FilterPathPattern(path_patterns) if path_patterns else None
+        filter_path_pattern = FilterPattern(path_patterns) if path_patterns else None
 
         for parent_dir_path, dir_names, file_names in os.walk(base_dir_path):
             if not is_all_files:
