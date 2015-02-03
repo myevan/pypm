@@ -5,10 +5,12 @@ import code
 import shutil
 import argparse
 import functools
+import inspect
 
 from fnmatch import fnmatch
 
 from codecs import BOM_UTF8
+
 
 class DirectoryContext(object):
     def __init__(self, dir_path):
@@ -16,14 +18,15 @@ class DirectoryContext(object):
         self.prev_dir_path = None
  
     def __enter__(self):
-        print 'push_directory:', self.target_dir_path
+        print('push_directory:{0}'.format(self.target_dir_path))
         self.prev_dir_path = os.getcwd()
         os.chdir(self.target_dir_path)
         return self
  
     def __exit__(self, type, value, tb):
-        print 'pop_directory:', self.prev_dir_path
+        print('pop_directory:{0}'.format(self.prev_dir_path))
         os.chdir(self.prev_dir_path)
+
 
 class FilterPattern(object):
     RECURSIVE_DIR_PATTERN = '...'
@@ -40,6 +43,7 @@ class FilterPattern(object):
                 return fnmatch(text, pattern)
             else:
                 return pattern.match(text)
+
 
 class ProjectManager(object):
     class ExitCode(object):
@@ -58,8 +62,7 @@ class ProjectManager(object):
 
     def command(self, **option_table):
         def handler(func):
-            option_names = func.func_code\
-                               .co_varnames[:func.func_code.co_argcount]
+            option_names = inspect.getargspec(func).args # OLD_CODE: func.func_code.co_varnames[:func.func_code.co_argcount]
 
             @functools.wraps(func)
             def wrapper(ns):
@@ -91,7 +94,7 @@ class ProjectManager(object):
 
                 return new_sub_parser
 
-            sub_parser = create_sub_parser(func.func_name, func.func_doc)
+            sub_parser = create_sub_parser(func.__name__, func.__doc__)
             sub_parser.set_defaults(func=wrapper)
         return handler
 
@@ -107,15 +110,15 @@ class ProjectManager(object):
         try:
             return ns.func(ns)
         except self.Error as e:
-            print ''
-            print str(e)
+            print('')
+            print(str(e))
             return self.ExitCode.WRONG_PROCESS
 
     @staticmethod
     def run_system_command(exec_path, exec_args, is_verbose=True):
         cmd_line = '%s %s' % (exec_path, ' '.join(exec_args))
         if is_verbose:
-            print '$ %s' % cmd_line
+            print('$ {0}'.format(cmd_line))
         return os.system(cmd_line)
 
     @staticmethod
@@ -230,27 +233,27 @@ class ProjectManager(object):
     def remove_symbolic_link(link_path, is_testing=True):
         real_link_path = os.path.abspath(link_path)
         if is_testing:
-            print 'test_remove_symbolic_link:', real_link_path
+            print('test_remove_symbolic_link:{0}'.format(real_link_path))
         else:
-            print 'remove_symbolic_link:', real_link_path
+            print('remove_symbolic_link:{0}'.format(real_link_path))
             os.unlink(real_link_path)
 
     @staticmethod
     def remove_file(file_path, is_testing=True):
         real_file_path = os.path.realpath(file_path)
         if is_testing:
-            print 'test_remove_file:', real_file_path
+            print('test_remove_file:{0}'.format(real_file_path))
         else:
-            print 'remove_file:', real_file_path
+            print('remove_file:{0}'.format(real_file_path))
             os.remove(real_file_path)
 
     @staticmethod
     def remove_tree(dir_path, is_testing=True):
         real_dir_path = os.path.realpath(dir_path)
         if is_testing:
-            print 'test_remove_tree:', real_dir_path
+            print('test_remove_tree:{0}'.format(real_dir_path))
         else:
-            print 'remove_tree:', real_dir_path
+            print('remove_tree:{0}'.format(real_dir_path))
             shutil.rmtree(real_dir_path)
 
     @classmethod
@@ -261,10 +264,10 @@ class ProjectManager(object):
         
         for real_dir_path in reversed(real_dir_paths):
             if is_testing:
-                print 'test_remove_tree:', real_dir_path, 'path_patterns:', path_patterns
+                print('test_remove_tree:{0} path_patterns:{1}'.format(real_dir_path, path_patterns))
             else:
                 if is_verbose:
-                    print 'remove_tree:', real_dir_path, 'path_patterns:', path_patterns
+                    print('remove_tree:{0} path_patterns:{1}'.format(real_dir_path, path_patterns))
                 shutil.rmtree(real_dir_path)
 
     @classmethod
@@ -275,27 +278,27 @@ class ProjectManager(object):
         
         for real_file_path in real_file_paths:
             if is_testing:
-                print 'test_remove_file:', real_file_path, 'path_patterns:', path_patterns
+                print('test_remove_file:{0} path_patterns:{1}'.format(real_file_path, path_patterns))
             else:
                 if is_verbose:
-                    print 'remove_file:', real_file_path, 'path_patterns:', path_patterns
+                    print('remove_file:{0} path_patterns:{1}'.format(real_file_path, path_patterns))
                 os.remove(real_file_path)
 
     @classmethod
     def make_symbolic_link(cls, source_path, target_path):
         real_source_path = os.path.realpath(source_path)
         real_target_path = os.path.realpath(target_path)
-        print 'make_symbolic_link_source:', real_source_path, 'target:', real_target_path
+        print('make_symbolic_link_source:{0} target:{1}'.format(real_source_path, real_target_path))
         os.symlink(real_source_path, real_target_path)
 
     @staticmethod
     def make_directory(dir_path):
         real_dir_path = os.path.realpath(dir_path)
         if os.access(real_dir_path, os.R_OK):
-            print 'already_made_directory:', real_dir_path
+            print('already_made_directory:{0}'.format(real_dir_path))
             return False
 
-        print 'make_directory:', real_dir_path
+        print('make_directory:{0}'.format(real_dir_path))
         os.makedirs(real_dir_path)
         return True
 
@@ -303,10 +306,10 @@ class ProjectManager(object):
     def touch_file(file_path):
         real_file_path = os.path.realpath(file_path)
         if os.access(real_file_path, os.R_OK):
-            print 'touch_file:', real_file_path
+            print('touch_file:{0}'.format(real_file_path))
             file_data = open(file_path, "rb").read()
         else:
-            print 'make_touch_file:', real_file_path
+            print('make_touch_file:{0}'.format(real_file_path))
             file_data = ""
 
         open(real_file_path, "wb").write(file_data)
@@ -321,6 +324,6 @@ if __name__ == '__main__':
 
     @pm.command(messages=dict(type=str, nargs='+'))
     def echo(messages):
-        print messages
+        print(messages)
 
     pm.run_command(['echo', 'haha'])

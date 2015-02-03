@@ -3,12 +3,13 @@ from pypm import ProjectManager
 
 pm = ProjectManager()
 
+
 @pm.command(messages=dict(type=str, nargs='+', help='echo messages'))
 def echo(messages):
     """
     echo messages
     """
-    print messages
+    print(messages)
 
 if __name__ == '__main__':
     import sys

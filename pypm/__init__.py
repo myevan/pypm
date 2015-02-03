@@ -1,1 +1,1 @@
-from project_manager import ProjectManager, FilterPattern
+from .project_manager import ProjectManager, FilterPattern
