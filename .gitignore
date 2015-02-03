@@ -1,6 +1,7 @@
 d
 dist
 build
+.idea
 
 *.egg-info
 *.pyc
