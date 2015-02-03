@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from pypm import ProjectManager
 
-pm = ProjectManager()
+pm = ProjectManager(__name__)
 
 
 @pm.command(hint=dict(type=str, nargs=1, help='file path or name hint'))

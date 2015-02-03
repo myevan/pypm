@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from pypm import ProjectManager
 
-pm = ProjectManager()
+pm = ProjectManager(__name__)
 
 
 @pm.command(messages=dict(type=str, nargs='+', help='echo messages'))

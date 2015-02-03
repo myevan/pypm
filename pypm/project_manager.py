@@ -56,9 +56,35 @@ class ProjectManager(object):
     class ArgumentError(Error):
         pass
 
-    def __init__(self):
+    def __init__(self, import_name=None):
+        self.root_path = self.get_root_path(import_name) if import_name is not None else os.getcwd()
         self.main_parser = argparse.ArgumentParser()
         self.sub_parsers = self.main_parser.add_subparsers()
+
+    @staticmethod
+    def get_root_path(import_name):
+        import sys
+        mod = sys.modules.get(import_name)
+        if mod is not None and hasattr(mod, '__file__'):
+            return os.path.dirname(os.path.abspath(mod.__file__))
+
+        import pkgutil
+        loader = pkgutil.get_loader(import_name)
+
+        if loader is None or import_name == '__main__':
+            return os.getcwd()
+
+        if hasattr(loader, 'get_filename'):
+            file_path = loader.get_filename(import_name)
+        else:
+            __import__(import_name)
+            mod = sys.modules[import_name]
+            file_path = getattr(mod, '__file__', None)
+
+            if file_path is None:
+                raise RuntimeError('NOT_FOUND_PATH_FOR_MODULE:{0}'.format(import_name))
+
+        return os.path.dirname(os.path.abspath(file_path))
 
     def command(self, **option_table):
         def handler(func):
