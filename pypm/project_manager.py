@@ -340,6 +340,9 @@ class ProjectManager(object):
 
         open(real_file_path, "wb").write(file_data)
 
+    def join_path(self, *paths):
+        return os.path.join(self.root_path, *paths)
+
 
 if __name__ == '__main__':
     FILE_PATH = os.path.realpath(__file__)
